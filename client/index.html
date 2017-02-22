@@ -5,7 +5,7 @@
     <!-- Will put the library into a JS global called io-->
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
-    <script>
+    <script type='text/babel>
         "use strict";
         (() => {
             // The socket connected to the server.
@@ -13,17 +13,18 @@
 
             let canvas;
             let ctx;
-            let sendBufferCanvas;
-            let sendBufferCtx;
 
-            // Shape unique to this client
-            const shape = { x: 0, y: 0, radius: 25, color: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)` };
+            // Shape for this client
+            const shape = { x: 0, y: 0, radius: 25, };
 
 
             // Setup the canvas
             const setupCanvas = () => {
                 canvas = document.querySelector('#canvas');
                 ctx = canvas.getContext('2d');
+
+                // Set initial color.
+                changeShapeColor();
 
                 // Add Event Listener allowing user to move the shape with their mouse.
                 canvas.addEventListener("mousemove", (e) => {
@@ -44,6 +45,7 @@
                 });
             };
 
+            // Send image to the server
             const sendImage = () => {
                 const data = {
                     x: 0,
@@ -54,6 +56,11 @@
                 };
 
                 socket.emit("draw", data);
+            };
+
+            // Change the shapes color.
+            const changeShapeColor = () => {
+                shape.color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
             };
 
             // Sets ip the socket.
@@ -71,7 +78,7 @@
                     }, 1000);
                 });
 
-                // On the "draw" message, update the shape entry in the shapes list.
+                // On the "draw" message, update the canvas image.
                 socket.on('draw', (data) => {
                     let image = new Image();
 
@@ -94,10 +101,7 @@
                 // Handle Canvas
                 setupCanvas();
 
-                document.querySelector('#color').onclick = () => {
-                    shape.color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)},
-1)`
-                };
+                document.querySelector('#color').onclick = changeShapeColor;
             };
 
             window.onload = init;
