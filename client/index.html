@@ -1,13 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
-    <script type="text/babel" >
-        "use strict";
-    
-    </script>
-</head>
-<body>
 
+<head>
+    <!-- Will put the library into a JS global called io-->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <script>
+        "use strict";
+        (() => {
+            // The socket connected to the server.
+            let socket;
+
+            let canvas;
+            let ctx;
+            let sendBufferCanvas;
+            let sendBufferCtx;
+
+            // Shape unique to this client
+            const shape = { x: 0, y: 0, radius: 25, color: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)` };
+
+
+            // Setup the canvas
+            const setupCanvas = () => {
+                canvas = document.querySelector('#canvas');
+                ctx = canvas.getContext('2d');
+
+                // Add Event Listener allowing user to move the shape with their mouse.
+                canvas.addEventListener("mousemove", (e) => {
+                    // Move shape to position
+                    const xPos = e.x - canvas.offsetLeft;
+                    const yPos = e.y - canvas.offsetTop;
+                    shape.x = xPos;
+                    shape.y = yPos;
+
+                    // Draw shape 
+                    ctx.beginPath();
+                    ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI, false);
+                    ctx.fillStyle = shape.color;
+                    ctx.fill();
+
+                    // Emit the shape to the server
+                    sendImage();
+                });
+            };
+
+            const sendImage = () => {
+                const data = {
+                    x: 0,
+                    y: 0,
+                    height: canvas.height,
+                    width: canvas.width,
+                    imgData: canvas.toDataURL(),  //get pixel data from canvas
+                };
+
+                socket.emit("draw", data);
+            };
+
+            // Sets ip the socket.
+            const setupSocket = () => {
+                const serverMessageDiv = document.querySelector('#ServerMessageDisplay');
+
+                // Set for recieving messages from the server. 
+                socket.on('serverMessage', (data) => {
+                    const message = data.message;
+                    serverMessageDiv.innerHTML = message;
+
+                    // Remove message after x seconds.
+                    setTimeout(() => {
+                        serverMessageDiv.innerHTML = "";
+                    }, 1000);
+                });
+
+                // On the "draw" message, update the shape entry in the shapes list.
+                socket.on('draw', (data) => {
+                    let image = new Image();
+
+                    image.onload = () => {
+                        ctx.save();
+                        ctx.globalCompositeOperation = "source-over";
+                        ctx.drawImage(image, data.x, data.y, data.width, data.height);
+                        ctx.restore();
+                    };
+
+                    image.src = data.imgData;
+                });
+            }
+
+            const init = () => {
+                // Connect to socket.
+                socket = io.connect();
+                setupSocket();
+
+                // Handle Canvas
+                setupCanvas();
+
+                document.querySelector('#color').onclick = () => {
+                    shape.color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)},
+1)`
+                };
+            };
+
+            window.onload = init;
+        })(window);
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h2>Move your mouse over the Canvas to move shape</h2>
+    <div>
+        The coordinates will be sent to the server and broadcasted. <br> Your shapes are green, other client's shapes are
+        red.
+        <span id='ServerMessageDisplay'></span>
+    </div>
+    <canvas id="canvas" height="500" width="500">Please use an HTML 5 browser</canvas>
+    <br>
+    <button id="color">New Color</button>
 </body>
+
 </html>
